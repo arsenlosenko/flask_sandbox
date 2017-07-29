@@ -9,12 +9,11 @@ To run this app do as follows:
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
+from tts import text_to_speech
 
-
-# TODO: setup socket connection
 # TODO: create default templates
 # TODO: connect to DB
-# TODO: setup tts
+# TODO: create bash deploy script
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret_secured_password'
@@ -23,7 +22,8 @@ socketio = SocketIO(app)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',
+                           title="RapBattlaChatReboot")
 
 
 @app.route('/login')
@@ -34,6 +34,13 @@ def login():
 @socketio.on('my event')
 def handle_my_event(json):
     print("Recieved json: ", str(json))
+
+
+@socketio.on('message')
+def handle_message(data):
+    print("Message: ", data)
+    text_to_speech(data)
+
 
 if __name__ == "__main__":
     print("Starting app...")
