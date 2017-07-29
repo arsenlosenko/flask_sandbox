@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+    {% block content %}
+        <h1> Test socket connection</h1>
+            <input type="text" id="text_input">
+            <button onclick="sendText()">Send</button>
+        <script>
+            var txt_input = document.getElementById('text_input');
+            socket.send(txt_input.value);
+        </script>
+    {% endblock %}
