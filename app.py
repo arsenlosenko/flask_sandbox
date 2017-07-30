@@ -14,6 +14,8 @@ from tts import text_to_speech
 
 # TODO: create default templates
 # TODO: connect to DB
+# TODO: complete routing
+# TODO: complete styling of the templates
 
 
 def before_request():
