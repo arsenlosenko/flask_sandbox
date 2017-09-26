@@ -1,41 +1,106 @@
-
 import os
-from flask import Flask, render_template, request, redirect, url_for
-from flask_socketio import SocketIO, send
-
-
-def before_request():
-    app.jinja_env.cache = {}
+import sqlite3
+from flask import (Flask, request, session, g, redirect, url_for, abort, render_template, flash)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret_secured_password'
-app.config["DEBUG"] = True
-socketio = SocketIO(app)
-app.before_request(before_request)
+app.config.from_object(__name__)
+
 app.config.update(
-    DEBUG=True,
-    TEST=True,
-    TEMPLATES_AUTO_RELOAD=True
+    DATABASE=os.path.join(app.root_path, "app.db"),
+    SECRET_KEY=b'_5#y2L"F4Q8z\n\xec]/',
+    USERNAME="admin",
+    PASSWORD="default"
 )
 
-page_title = "RapBattlaChatReboot"
+app.config.from_envvar("APP_SETTINGS", silent=True)
+
+
+def connect_db():
+    rv = sqlite3.connect(app.config["DATABASE"])
+    rv.row_factory = sqlite3.Row
+    return rv
+
+
+def get_db():
+    if not hasattr(g, "app.db"):
+        g.sqlite_db = connect_db()
+    return g.sqlite_db
+
+#
+# @app.teardown_appcontext
+# def close_db():
+#     if hasattr(g, "app.db"):
+#         g.sqlite_db.close()
+
+
+def init_db():
+    db = get_db()
+    with app.open_resource("schema.sql", mode='r') as f:
+        db.cursor().executescript(f.read())
+
+    db.commit()
+
+
+@app.cli.command('initdb')
+def initdb_command():
+    init_db()
+    print("Initialized database")
 
 
 @app.route('/')
-def index():
-    return render_template('index.html', title=page_title)
+def show_entries():
+    db = get_db()
+    cur = db.execute("select title, text from entries order by id desc")
+    entries = cur.fetchall()
+    return render_template('show_entries.html', entries=entries)
 
 
-@socketio.on('message')
-def handle_my_event(data):
-    print("Comment: ", data)
-    socketio.emit('response', data)
+@app.route('/add', methods=['POST'])
+def add_entry():
+    if not session.get('logged_in'):
+        abort(401)
+
+    db = get_db()
+    db.execute('insert into entries (title, text) values (? ,?)',
+               [request.form['title'], request.form['text']])
+    db.commit()
+    flash('New entry was successfully posted')
+    return redirect(url_for('show_entries'))
 
 
-@socketio.on('connect')
-def handle_connect():
-    print("Connected")
+@app.route('/login', methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form['username'] != app.config['USERNAME']:
+            error = 'Invalid username'
+        elif request.form['password'] != app.config['PASSWORD']:
+            error = 'Invalid password'
+        else:
+            session['logged_in'] = True
+            flash("You were logged in")
+            return redirect(url_for('show_entries'))
+    return render_template('login.html', error=error)
 
-if __name__ == "__main__":
-    print("Starting app...")
-    socketio.run(app)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_out', None)
+    flash('You were logged out')
+    return redirect(url_for("show_entries"))
+
+
+if __name__ == '__main__':
+    app.run(port="5000")
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,3 @@
+graft flask-rapbattlechat/templates
+graft flask-rapbattlechat/static
+include flask-rapbattlechat/schema.sql

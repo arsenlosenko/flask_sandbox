@@ -4,11 +4,6 @@ $(document).ready(function(){
         socket.emit('connect');
     });
 
-    $('#sendMsg').click(function(){
-        var msg = $('#comment').val();
-        console.log(msg);
-    });
-
 });
 
 
